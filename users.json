@@ -1,8 +1,8 @@
 {
-    "admin": {
-        "password": "pbkdf2:sha256:600000$PLACEHOLDER$HASH",
+    "architech66": {
+        "password": "pbkdf2:sha256:600000$Jw4KN5UGL0kQhY7A$da17f2dbd6c8a11810ecf2c62a12611a99e0c2e1e6f87e84a3d98e97e6ebfca8",
         "is_admin": true,
-        "email": "your@email.com",
+        "email": "architechq@gmail.com",
         "product_key": ""
     }
 }
