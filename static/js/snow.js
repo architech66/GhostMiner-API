@@ -5,15 +5,20 @@ document.addEventListener('DOMContentLoaded', () => {
   for (let i = 0; i < 200; i++) {
     const flake = document.createElement('span');
     flake.className = 'snowflake';
+
     // random horizontal start
     flake.style.left = `${Math.random() * width}px`;
+
     // random speed & delay
-    const dur = 10 + Math.random() * 20;
-    flake.style.animationDuration = `${dur}s`;
-    flake.style.animationDelay = `${-Math.random() * dur}s`;
+    const duration = 10 + Math.random() * 20;
+    flake.style.animationDuration = `${duration}s`;
+    flake.style.animationDelay    = `${-Math.random() * duration}s`;
+
     // random size & opacity
-    flake.style.transform = `scale(${0.2 + Math.random() * 0.8})`;
-    flake.style.opacity = `${0.2 + Math.random() * 0.8}`;
+    const scale = 0.2 + Math.random() * 0.8;
+    flake.style.transform = `scale(${scale})`;
+    flake.style.opacity   = `${0.2 + Math.random() * 0.6}`;
+
     snow.appendChild(flake);
   }
 });
