@@ -1,0 +1,6 @@
+{
+    "admin": {
+        "password": "REPLACE_THIS_HASH",
+        "is_admin": true
+    }
+}
