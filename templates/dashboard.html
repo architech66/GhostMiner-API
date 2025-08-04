@@ -2,23 +2,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8">
   <title>Admin Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/dashboard.css') }}"
+  >
 </head>
 <body>
+  <!-- snow container (200 flakes injected by snow.js) -->
   <div class="snow"></div>
 
   <div class="dashboard-container">
     <div class="dashboard-box">
       <h1 class="dashboard-title">[-] Admin Control [*]</h1>
       <div class="button-grid">
-        <a href="{{ url_for('wallet_cracker') }}"><button class="menu-button">[>] Wallet Cracker</button></a>
-        <a href="{{ url_for('balance_checker') }}"><button class="menu-button">[>] Balance Checker</button></a>
-        <a href="{{ url_for('logs') }}"><button class="menu-button">[>] Logs</button></a>
-        <a href="{{ url_for('settings') }}"><button class="menu-button">[>] Settings</button></a>
-        <a href="{{ url_for('logout') }}"><button class="menu-button">[>] Logout</button></a>
+        <a href="{{ url_for('wallet_cracker') }}">
+          <button class="menu-button">[>] Wallet Cracker</button>
+        </a>
+        <a href="{{ url_for('balance_checker') }}">
+          <button class="menu-button">[>] Balance Checker</button>
+        </a>
+        <a href="{{ url_for('logs') }}">
+          <button class="menu-button">[>] Logs</button>
+        </a>
+        <a href="{{ url_for('settings') }}">
+          <button class="menu-button">[>] Settings</button>
+        </a>
+        <a href="{{ url_for('logout') }}">
+          <button class="menu-button">[>] Logout</button>
+        </a>
       </div>
     </div>
   </div>
