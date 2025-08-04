@@ -1,19 +1,35 @@
-<!-- templates/login.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Login</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <meta charset="UTF-8">
+  <title>Admin Panel – Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- absolute path to your compiled CSS -->
+  <link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
 <body>
   <div class="dashboard-container">
     <div class="dashboard-box">
-      <h1 class="dashboard-title">[-] Access Portal [*]</h1>
-      <form action="{{ url_for('login') }}" method="post">
-        <input type="text"  name="username" placeholder="Username" class="input-field" required>
-        <input type="password" name="password" placeholder="Password" class="input-field" required>
+      <!-- clean heading -->
+      <h1 class="dashboard-title">Admin Panel</h1>
+
+      <!-- POSTs to /admin/login -->
+      <form action="/admin/login" method="post">
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          class="input-field"
+          autofocus
+          required
+        >
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          class="input-field"
+          required
+        >
         <button type="submit" class="menu-button">[>] Log In</button>
       </form>
     </div>
