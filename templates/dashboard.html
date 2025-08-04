@@ -1,42 +1,41 @@
-<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
+  <title>Admin Panel – Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/dashboard.css') }}"
-  >
+  <link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
 <body>
-  <!-- snow container (200 flakes injected by snow.js) -->
+  <!-- full-page snow container (JS will inject 200 flakes) -->
   <div class="snow"></div>
 
   <div class="dashboard-container">
     <div class="dashboard-box">
-      <h1 class="dashboard-title">[-] Admin Control [*]</h1>
+      <!-- same heading here -->
+      <h1 class="dashboard-title">Admin Panel</h1>
+
       <div class="button-grid">
-        <a href="{{ url_for('wallet_cracker') }}">
+        <a href="/admin/wallet_cracker">
           <button class="menu-button">[>] Wallet Cracker</button>
         </a>
-        <a href="{{ url_for('balance_checker') }}">
+        <a href="/admin/balance_checker">
           <button class="menu-button">[>] Balance Checker</button>
         </a>
-        <a href="{{ url_for('logs') }}">
+        <a href="/admin/logs">
           <button class="menu-button">[>] Logs</button>
         </a>
-        <a href="{{ url_for('settings') }}">
+        <a href="/admin/settings">
           <button class="menu-button">[>] Settings</button>
         </a>
-        <a href="{{ url_for('logout') }}">
+        <a href="/admin/logout">
           <button class="menu-button">[>] Logout</button>
         </a>
       </div>
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/snow.js') }}"></script>
+  <!-- absolute path to snow.js -->
+  <script src="/static/js/snow.js"></script>
 </body>
 </html>
