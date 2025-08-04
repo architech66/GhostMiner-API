@@ -1,2 +1,5 @@
 Flask
-flask-cors
+Flask-Login
+Flask-SQLAlchemy
+Flask-Cors
+Werkzeug
