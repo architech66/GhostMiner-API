@@ -1,6 +1,8 @@
 {
     "admin": {
-        "password": "REPLACE_THIS_HASH",
-        "is_admin": true
+        "password": "pbkdf2:sha256:600000$PLACEHOLDER$HASH",
+        "is_admin": true,
+        "email": "your@email.com",
+        "product_key": ""
     }
 }
