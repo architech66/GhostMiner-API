@@ -38,3 +38,44 @@
                 </tr>
                 {% endfor %}
             </tbody>
+        </table>
+
+        <hr style="border: none; border-top: 1px solid #333; margin: 22px 0;">
+
+        <h3>Send Message</h3>
+        <form id="msg-form" class="flex">
+            <input type="text" id="msg-users" placeholder="Targets (comma-separated or 'all')" style="width:120px;">
+            <input type="text" id="msg-content" placeholder="Message" style="flex:1;">
+            <button type="submit">Send</button>
+        </form>
+        <div id="msg-status"></div>
+
+        <h3>License Generator</h3>
+        <form id="license-form" class="flex">
+            <button type="submit">Generate 16-Digit Key</button>
+            <input type="text" id="gen-license" readonly style="width:210px;">
+        </form>
+    </div>
+    <script>
+        document.getElementById('license-form').onsubmit = async e => {
+            e.preventDefault();
+            const res = await fetch('/api/generate_license', {method:'POST'});
+            const data = await res.json();
+            document.getElementById('gen-license').value = data.license || '';
+        };
+        document.getElementById('msg-form').onsubmit = async e => {
+            e.preventDefault();
+            let targets = document.getElementById('msg-users').value.split(',').map(x=>x.trim());
+            if (targets.length === 0 || !targets[0]) targets = ['all'];
+            let msg = document.getElementById('msg-content').value;
+            const res = await fetch('/api/send_message', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({targets: targets, message: msg})
+            });
+            let data = await res.json();
+            document.getElementById('msg-status').textContent = data.success ? 'Message sent!' : 'Failed';
+        };
+    </script>
+</body>
+</html>
