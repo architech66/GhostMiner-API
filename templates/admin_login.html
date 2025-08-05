@@ -1,17 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Login</title>
+    <meta charset="UTF-8">
+    <title>GhostMiner Admin Login</title>
+    <link rel="stylesheet" href="/static/admin.css">
 </head>
 <body>
-    <h1>Admin Login</h1>
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    <form method="post">
-        <input name="username" type="text" placeholder="Username">
-        <input name="password" type="password" placeholder="Password">
-        <button type="submit">Login</button>
-    </form>
+    <div class="login-container">
+        <h2>GhostMiner Admin</h2>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <input type="password" name="auth_key" placeholder="Enter Auth Key" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
 </body>
 </html>
