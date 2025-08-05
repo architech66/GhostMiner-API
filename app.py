@@ -1,222 +1,287 @@
-import os
 import sqlite3
-import random
 import string
-import datetime
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import random
+import time
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify, render_template, redirect, session, url_for
+from flask_cors import CORS
 
 app = Flask(__name__)
-app.secret_key = "replace-this-with-something-secret"
+app.secret_key = "super_secret_admin_key"
+CORS(app)
 
 DB_PATH = "ghostminer.db"
-ADMIN_KEY = "B28tV1q6TbShZ9e5rQa6uP3w"  # Your admin login key
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            email TEXT,
-            key TEXT NOT NULL
-        )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            target TEXT NOT NULL,
-            message TEXT NOT NULL
-        )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS licenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT NOT NULL UNIQUE,
-            active INTEGER DEFAULT 0,
-            expires_at TEXT,
-            duration TEXT DEFAULT 'lifetime'
-        )''')
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS licenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                active INTEGER NOT NULL DEFAULT 0,
+                duration TEXT NOT NULL,
+                expires_at INTEGER,
+                issued_at INTEGER,
+                assigned_user_id INTEGER
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT,
+                password TEXT,
+                license_key TEXT,
+                created_at INTEGER
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target TEXT,
+                message TEXT,
+                sent_at INTEGER
+            )
+        """)
         conn.commit()
+
 init_db()
 
-def expiry_from_duration(duration):
-    now = datetime.datetime.utcnow()
-    if duration == '24h':
-        return (now + datetime.timedelta(hours=24)).isoformat()
-    elif duration == '1w':
-        return (now + datetime.timedelta(weeks=1)).isoformat()
-    elif duration == '1m':
-        return (now + datetime.timedelta(days=30)).isoformat()
-    elif duration == 'lifetime':
-        return None
-    return None
+# Utility functions
+def random_license_key(length=16):
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=length))
 
-# --- ADMIN LOGIN ---
-@app.route('/admin', methods=['GET', 'POST'])
+def license_time_seconds(duration):
+    durations = {
+        "24h": 24*3600,
+        "1w": 7*24*3600,
+        "1m": 30*24*3600,
+        "lifetime": 50*365*24*3600
+    }
+    return durations.get(duration, durations["lifetime"])
+
+@app.route('/admin')
+def admin_login_page():
+    if session.get("admin"):
+        return redirect("/admin/panel")
+    return render_template("admin_login.html")
+
+@app.route('/admin/login', methods=["POST"])
 def admin_login():
-    if session.get('admin'):
-        return redirect(url_for('admin_panel'))
-    error = None
-    if request.method == 'POST':
-        key = request.form.get('admin_key')
-        if key == ADMIN_KEY:
-            session['admin'] = True
-            return redirect(url_for('admin_panel'))
-        else:
-            error = "Invalid key"
-    return render_template('admin_login.html', error=error)
+    data = request.json
+    if data.get("key") == "YOUR_ADMIN_PANEL_KEY_HERE":  # replace with your real admin key
+        session["admin"] = True
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "Invalid admin key"}), 401
 
 @app.route('/admin/logout')
 def admin_logout():
-    session.pop('admin', None)
-    return redirect(url_for('admin_login'))
+    session.clear()
+    return redirect("/admin")
 
 @app.route('/admin/panel')
 def admin_panel():
-    if not session.get('admin'):
-        return redirect(url_for('admin_login'))
-    with sqlite3.connect(DB_PATH) as conn:
-        users = conn.execute('SELECT * FROM users').fetchall()
-        licenses = conn.execute('SELECT * FROM licenses').fetchall()
-    return render_template('admin_panel.html', users=users, licenses=licenses)
+    if not session.get("admin"):
+        return redirect("/admin")
+    return render_template("admin_panel.html")
 
-# --- LICENSE API ---
-@app.route('/api/generate_license', methods=['POST'])
-def generate_license():
-    if not session.get('admin'):
-        return jsonify({'success': False, 'msg': 'Unauthorized'})
-    # Generate unique 16 digit key
-    new_key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-    with sqlite3.connect(DB_PATH) as conn:
-        try:
-            conn.execute('INSERT INTO licenses (key, active, duration) VALUES (?, 0, ?)', (new_key, 'lifetime'))
-            conn.commit()
-        except sqlite3.IntegrityError:
-            return jsonify({'success': False, 'msg': 'Duplicate key'})
-    return jsonify({'success': True, 'license': new_key})
+# ---- LICENSE API ----
 
-@app.route('/api/licenses', methods=['GET'])
-def get_licenses():
-    if not session.get('admin'):
-        return jsonify([])
+@app.route('/api/licenses', methods=["GET"])
+def api_get_licenses():
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
     with sqlite3.connect(DB_PATH) as conn:
-        licenses = conn.execute('SELECT * FROM licenses').fetchall()
-    def format_expiry(exp):
-        if not exp:
-            return "∞"
-        dt = datetime.datetime.fromisoformat(exp)
-        remaining = dt - datetime.datetime.utcnow()
-        if remaining.total_seconds() < 0:
-            return "Expired"
-        days, seconds = divmod(remaining.total_seconds(), 86400)
-        hours, seconds = divmod(seconds, 3600)
-        return f"{int(days)}d {int(hours)}h"
-    result = []
-    for lic in licenses:
-        result.append({
-            "id": lic[0],
-            "key": lic[1],
-            "active": bool(lic[2]),
-            "expires_at": lic[3],
-            "duration": lic[4],
-            "time_left": format_expiry(lic[3])
-        })
-    return jsonify(result)
+        c = conn.cursor()
+        c.execute("SELECT id, key, active, duration, expires_at FROM licenses")
+        rows = c.fetchall()
+        licenses = []
+        for row in rows:
+            expires_at = row[4]
+            time_left = max(0, expires_at - int(time.time())) if expires_at else "Lifetime"
+            licenses.append({
+                "id": row[0],
+                "key": row[1],
+                "active": bool(row[2]),
+                "duration": row[3],
+                "expires_at": expires_at,
+                "time_left": time_left
+            })
+    return jsonify(licenses)
 
-@app.route('/api/set_license_active', methods=['POST'])
-def set_license_active():
-    if not session.get('admin'):
-        return jsonify({'success': False})
-    data = request.get_json()
-    license_id = data.get('license_id')
-    active = data.get('active')
-    duration = data.get('duration')
-    expires_at = expiry_from_duration(duration) if active else None
+@app.route('/api/licenses', methods=["POST"])
+def api_create_license():
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    duration = request.json.get("duration", "lifetime")
+    key = random_license_key()
+    issued_at = int(time.time())
+    expires_at = issued_at + license_time_seconds(duration) if duration != "lifetime" else None
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute('UPDATE licenses SET active=?, duration=?, expires_at=? WHERE id=?',
-            (1 if active else 0, duration, expires_at, license_id))
+        c = conn.cursor()
+        c.execute("INSERT INTO licenses (key, active, duration, expires_at, issued_at) VALUES (?, ?, ?, ?, ?)",
+                  (key, 0, duration, expires_at, issued_at))
         conn.commit()
-    return jsonify({'success': True})
+    return jsonify({"key": key, "duration": duration, "expires_at": expires_at})
 
-@app.route('/api/delete_license', methods=['POST'])
-def delete_license():
-    if not session.get('admin'):
-        return jsonify({'success': False})
-    data = request.get_json()
-    license_id = data.get('license_id')
+@app.route('/api/licenses/activate/<license_key>', methods=["POST"])
+def api_activate_license(license_key):
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute('DELETE FROM licenses WHERE id=?', (license_id,))
+        c = conn.cursor()
+        c.execute("UPDATE licenses SET active=1 WHERE key=?", (license_key,))
         conn.commit()
-    return jsonify({'success': True})
+    return jsonify({"ok": True})
 
-# --- USERS, MESSAGES, ETC ---
-@app.route('/api/get_users', methods=['GET'])
-def get_users():
-    if not session.get('admin'):
-        return jsonify([])
+@app.route('/api/licenses/deactivate/<license_key>', methods=["POST"])
+def api_deactivate_license(license_key):
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
     with sqlite3.connect(DB_PATH) as conn:
-        users = conn.execute('SELECT * FROM users').fetchall()
-    return jsonify([
-        {'id': u[0], 'username': u[1], 'email': u[2], 'key': u[3]}
-        for u in users
-    ])
-
-@app.route('/api/send_message', methods=['POST'])
-def send_message():
-    if not session.get('admin'):
-        return jsonify({'success': False, 'msg': 'Unauthorized'})
-    data = request.get_json()
-    message = data.get('message')
-    targets = data.get('targets', [])
-    with sqlite3.connect(DB_PATH) as conn:
-        for target in targets:
-            conn.execute('INSERT INTO messages (target, message) VALUES (?,?)', (target, message))
+        c = conn.cursor()
+        c.execute("UPDATE licenses SET active=0 WHERE key=?", (license_key,))
         conn.commit()
-    return jsonify({'success': True})
+    return jsonify({"ok": True})
 
-@app.route('/api/get_messages', methods=['POST'])
-def get_messages():
-    data = request.get_json()
-    username = data.get('username')
+@app.route('/api/licenses/delete/<license_key>', methods=["POST"])
+def api_delete_license(license_key):
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
     with sqlite3.connect(DB_PATH) as conn:
-        msgs = conn.execute('SELECT message FROM messages WHERE target=? OR target="all"', (username,)).fetchall()
-    return jsonify([m[0] for m in msgs])
+        c = conn.cursor()
+        c.execute("DELETE FROM licenses WHERE key=?", (license_key,))
+        conn.commit()
+    return jsonify({"ok": True})
 
-# --- TOOL FRONTEND LOGIN/API ---
-@app.route('/api/create_account', methods=['POST'])
-def create_account():
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    license_key = data.get('license_key')
-
+@app.route('/api/licenses/update_time/<license_key>', methods=["POST"])
+def api_update_license_time(license_key):
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    duration = request.json.get("duration", "lifetime")
+    expires_at = int(time.time()) + license_time_seconds(duration) if duration != "lifetime" else None
     with sqlite3.connect(DB_PATH) as conn:
-        # Only accept active, non-expired licenses
-        lic = conn.execute('SELECT * FROM licenses WHERE key=? AND active=1', (license_key,)).fetchone()
+        c = conn.cursor()
+        c.execute("UPDATE licenses SET duration=?, expires_at=? WHERE key=?", (duration, expires_at, license_key))
+        conn.commit()
+    return jsonify({"ok": True})
+
+# ---- USER API ----
+
+@app.route('/api/users', methods=["GET"])
+def api_get_users():
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute("SELECT id, username, email, license_key FROM users")
+        rows = c.fetchall()
+        users = []
+        for row in rows:
+            users.append({
+                "id": row[0],
+                "username": row[1],
+                "email": row[2],
+                "license_key": row[3]
+            })
+    return jsonify(users)
+
+@app.route('/api/users', methods=["POST"])
+def api_create_user():
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")  # You should hash this in production!
+    license_key = data.get("license_key")
+    created_at = int(time.time())
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, email, password, license_key, created_at) VALUES (?, ?, ?, ?, ?)",
+                  (username, email, password, license_key, created_at))
+        conn.commit()
+    # Mark license as assigned/used (optional)
+    c = conn.cursor()
+    c.execute("UPDATE licenses SET assigned_user_id=(SELECT id FROM users WHERE username=?) WHERE key=?", (username, license_key))
+    conn.commit()
+    return jsonify({"ok": True})
+
+# ---- FRONTEND ACCOUNT CREATION ----
+
+@app.route('/api/register', methods=["POST"])
+def api_register():
+    data = request.json
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
+    license_key = data.get("license_key")
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        # 1. Check license exists, active, not expired, not used
+        c.execute("SELECT id, active, expires_at, assigned_user_id FROM licenses WHERE key=?", (license_key,))
+        lic = c.fetchone()
         if not lic:
-            return jsonify({'success': False, 'msg': 'Invalid or inactive license'})
-        # Check expiry
+            return jsonify({"ok": False, "error": "License key not found"}), 404
+        if not lic[1]:
+            return jsonify({"ok": False, "error": "License not active"}), 403
+        if lic[2] and int(time.time()) > lic[2]:
+            return jsonify({"ok": False, "error": "License expired"}), 403
         if lic[3]:
-            if datetime.datetime.utcnow() > datetime.datetime.fromisoformat(lic[3]):
-                return jsonify({'success': False, 'msg': 'License expired'})
-        # Mark as used (delete? or keep for tracking—here we keep, just let login use again while active/valid)
-        # Add user:
-        conn.execute('INSERT INTO users (username, email, key) VALUES (?, ?, ?)', (username, email, license_key))
+            return jsonify({"ok": False, "error": "License already used"}), 403
+        # 2. Register user
+        c.execute("INSERT INTO users (username, email, password, license_key, created_at) VALUES (?, ?, ?, ?, ?)",
+                  (username, email, password, license_key, int(time.time())))
+        # 3. Mark license as used
+        c.execute("UPDATE licenses SET assigned_user_id=(SELECT id FROM users WHERE username=?) WHERE key=?", (username, license_key))
         conn.commit()
-    return jsonify({'success': True})
+    return jsonify({"ok": True})
 
-@app.route('/api/login', methods=['POST'])
+@app.route('/api/login', methods=["POST"])
 def api_login():
-    data = request.get_json()
-    username = data.get('username')
-    license_key = data.get('license_key')
+    data = request.json
+    username = data.get("username")
+    license_key = data.get("license_key")
     with sqlite3.connect(DB_PATH) as conn:
-        user = conn.execute('SELECT * FROM users WHERE username=? AND key=?', (username, license_key)).fetchone()
-        # Only allow login if license is still active/valid
-        lic = conn.execute('SELECT * FROM licenses WHERE key=? AND active=1', (license_key,)).fetchone()
-        if not user or not lic:
-            return jsonify({'success': False, 'msg': 'Invalid login or license inactive'})
-        if lic[3]:  # has expiry
-            if datetime.datetime.utcnow() > datetime.datetime.fromisoformat(lic[3]):
-                return jsonify({'success': False, 'msg': 'License expired'})
-    return jsonify({'success': True, 'user': {'id': user[0], 'username': user[1], 'email': user[2]}})
+        c = conn.cursor()
+        c.execute("SELECT id, license_key FROM users WHERE username=?", (username,))
+        user = c.fetchone()
+        if user and user[1] == license_key:
+            return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "Invalid credentials"}), 401
 
-# --- MAIN ---
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+# ---- MESSAGES (Admin panel -> users) ----
+
+@app.route('/api/messages', methods=["POST"])
+def api_send_message():
+    if not session.get("admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json
+    target = data.get("target")  # can be 'all' or comma separated
+    message = data.get("message")
+    sent_at = int(time.time())
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute("INSERT INTO messages (target, message, sent_at) VALUES (?, ?, ?)", (target, message, sent_at))
+        conn.commit()
+    # You'd add logic for delivering this message to users (e.g., next API call they make, they receive it)
+    return jsonify({"ok": True})
+
+@app.route('/api/messages/inbox/<username>', methods=["GET"])
+def api_inbox(username):
+    # User fetches their messages (including global/all)
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute("SELECT message FROM messages WHERE target=? OR target='all'", (username,))
+        msgs = [row[0] for row in c.fetchall()]
+    return jsonify({"messages": msgs})
+
+# ---- Health Check ----
+@app.route('/health')
+def health():
+    return "OK", 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
