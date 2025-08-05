@@ -1,52 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>GhostMiner Admin</title>
-    <link rel="stylesheet" href="/static/admin.css">
+    <title>Admin Panel - GhostMiner</title>
+    <style>
+        body { background: #17171c; color: #fff; font-family: Arial; }
+        .container { max-width: 700px; margin: 70px auto; padding: 40px 30px; background: #232323; border-radius: 16px; box-shadow: 0 6px 40px #0007; }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+        th, td { padding: 10px; border-bottom: 1px solid #353545; text-align: left; }
+        th { color: #FF4747; }
+        a { color: #aaa; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>GhostMiner Admin Panel</h1>
-        <a href="{{ url_for('admin_logout') }}" class="logout-btn">Logout</a>
-        <hr>
-        <h2>Wallets Found</h2>
+        <h1 style="margin-bottom:10px;">GhostMiner Admin Panel</h1>
+        <a href="{{ url_for('admin_logout') }}">Logout</a>
+        <h3 style="margin-top:20px;">Registered Users</h3>
         <table>
+            <tr><th>ID</th><th>Username</th><th>Email</th><th>Key</th></tr>
+            {% for user in users %}
             <tr>
-                <th>Time</th>
-                <th>Address</th>
-                <th>Coin</th>
-                <th>Balance</th>
-                <th>Source Machine</th>
-            </tr>
-            {% for wallet in data.wallets %}
-            <tr>
-                <td>{{ wallet.time }}</td>
-                <td>{{ wallet.address }}</td>
-                <td>{{ wallet.coin }}</td>
-                <td>{{ wallet.balance }}</td>
-                <td>{{ wallet.machine }}</td>
+                <td>{{ user[0] }}</td>
+                <td>{{ user[1] }}</td>
+                <td>{{ user[2] }}</td>
+                <td>{{ user[3] }}</td>
             </tr>
             {% endfor %}
         </table>
-        <h2>Usernames</h2>
-        <ul>
-            {% for username in data.usernames %}
-            <li>{{ username }}</li>
-            {% endfor %}
-        </ul>
-        <h2>Logs</h2>
-        <pre>
-            {% for log in data.logs %}
-            {{ log.time }} | {{ log.event }} | {{ log.details }}
-            {% endfor %}
-        </pre>
-        <h2>Machines</h2>
-        <ul>
-            {% for machine in data.machines %}
-            <li>{{ machine }}</li>
-            {% endfor %}
-        </ul>
     </div>
 </body>
 </html>
