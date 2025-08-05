@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostMiner Admin</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+    <div class="container">
+        <h1>GhostMiner Admin Panel</h1>
+        <a href="{{ url_for('admin_logout') }}" class="logout-btn">Logout</a>
+        <hr>
+        <h2>Wallets Found</h2>
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>Address</th>
+                <th>Coin</th>
+                <th>Balance</th>
+                <th>Source Machine</th>
+            </tr>
+            {% for wallet in data.wallets %}
+            <tr>
+                <td>{{ wallet.time }}</td>
+                <td>{{ wallet.address }}</td>
+                <td>{{ wallet.coin }}</td>
+                <td>{{ wallet.balance }}</td>
+                <td>{{ wallet.machine }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <h2>Usernames</h2>
+        <ul>
+            {% for username in data.usernames %}
+            <li>{{ username }}</li>
+            {% endfor %}
+        </ul>
+        <h2>Logs</h2>
+        <pre>
+            {% for log in data.logs %}
+            {{ log.time }} | {{ log.event }} | {{ log.details }}
+            {% endfor %}
+        </pre>
+        <h2>Machines</h2>
+        <ul>
+            {% for machine in data.machines %}
+            <li>{{ machine }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
