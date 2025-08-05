@@ -1,32 +1,53 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, g
 import os
-import json
 
 app = Flask(__name__)
-app.secret_key = "your-very-secret-key"  # CHANGE this for security
+app.secret_key = "your-very-secret-key"
 
-# Hard-coded admin key for now
-ADMIN_KEY = "HTvXHtzE5u3F7BQ8zjLA4KvW"  # replace if you want
+ADMIN_KEY = "HTvXHtzE5u3F7BQ8zjLA4KvW"  # Replace this with your real key
 
-DATA_FILE = "data.json"
+DATABASE = "ghostminer.db"
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "w") as f:
-            json.dump({"users": [], "logs": []}, f)
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row
+    return db
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+def init_db():
+    with app.app_context():
+        db = get_db()
+        db.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        db.commit()
+
+@app.before_first_request
+def setup():
+    init_db()
 
 def is_authenticated():
     return session.get("authenticated", False)
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
-    # Already logged in? Go to panel
     if is_authenticated():
         return redirect(url_for("admin_panel"))
     error = None
@@ -43,25 +64,25 @@ def admin_login():
 def admin_panel():
     if not is_authenticated():
         return redirect(url_for("admin_login"))
-    # Loads data, passes to panel template
-    data = load_data()
-    return render_template("admin_panel.html", data=data)
+    db = get_db()
+    users = db.execute("SELECT * FROM users ORDER BY created_at DESC").fetchall()
+    logs = db.execute("SELECT * FROM logs ORDER BY created_at DESC").fetchall()
+    return render_template("admin_panel.html", users=users, logs=logs)
 
 @app.route("/admin/logout")
 def admin_logout():
     session.clear()
     return redirect(url_for("admin_login"))
 
-# Example API endpoint for your fake miner/app to send logs/users to the backend
 @app.route("/api/track", methods=["POST"])
 def track():
     content = request.json
-    data = load_data()
+    db = get_db()
     if "user" in content:
-        data["users"].append(content["user"])
+        db.execute("INSERT INTO users (username) VALUES (?)", (content["user"],))
     if "log" in content:
-        data["logs"].append(content["log"])
-    save_data(data)
+        db.execute("INSERT INTO logs (message) VALUES (?)", (content["log"],))
+    db.commit()
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
