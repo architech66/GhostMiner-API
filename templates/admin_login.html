@@ -1,23 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GhostMiner Admin Panel</title>
+    <title>Admin Login</title>
 </head>
 <body>
-    <h2>GhostMiner Admin Panel</h2>
+    <h1>Admin Login</h1>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
     <form method="post">
-        <textarea name="message" placeholder="Type notification"></textarea><br>
-        <label>Select users:</label>
-        <select name="users" multiple>
-            <option value="all">All Users</option>
-            {% for u in users %}
-                <option value="{{ u }}">{{ u }}</option>
-            {% endfor %}
-        </select><br>
-        <button type="submit">Send Notification</button>
+        <input name="username" type="text" placeholder="Username">
+        <input name="password" type="password" placeholder="Password">
+        <button type="submit">Login</button>
     </form>
-    {% if msg %}<p style="color:green">{{ msg }}</p>{% endif %}
-    <br>
-    <a href="{{ url_for('admin_logout') }}">Logout</a>
 </body>
 </html>
