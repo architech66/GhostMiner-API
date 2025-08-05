@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GhostMiner Admin Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>GhostMiner Admin Panel</h1>
+        <form method="POST" action="{{ url_for('admin_logout') }}">
+            <button type="submit">Logout</button>
+        </form>
+        
+        <h2>Users</h2>
+        <table>
+            <tr><th>Username</th><th>Email</th><th>License Key</th><th>Action</th></tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.license_key or 'None' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_user', username=user.username) }}">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        
+        <h2>Create User</h2>
+        <form method="POST" action="{{ url_for('create_user') }}">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Create User</button>
+        </form>
+        
+        <h2>License Keys</h2>
+        <table>
+            <tr><th>Key</th><th>Active</th><th>User</th><th>Expires</th><th>Action</th></tr>
+            {% for key in keys %}
+            <tr>
+                <td>{{ key.key }}</td>
+                <td>{{ 'Yes' if key.active else 'No' }}</td>
+                <td>{{ key.user or 'None' }}</td>
+                <td>{{ (datetime.fromtimestamp(key.expires_at).strftime('%Y-%m-%d %H:%M:%S') if key.expires_at else 'Lifetime') }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('toggle_key', key=key.key) }}">
+                        <button type="submit">{{ 'Deactivate' if key.active else 'Activate' }}</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('delete_key', key=key.key) }}">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        
+        <h2>Generate License Key</h2>
+        <form method="POST" action="{{ url_for('generate_key') }}">
+            <select name="duration">
+                <option value="24h">24 Hours</option>
+                <option value="1w">1 Week</option>
+                <option value="1m">1 Month</option>
+                <option value="lifetime">Lifetime</option>
+            </select>
+            <button type="submit">Generate</button>
+        </form>
+        
+        <h2>Assign Key to User</h2>
+        <form method="POST" action="{{ url_for('assign_key') }}">
+            <select name="username">
+                {% for user in users %}
+                <option value="{{ user.username }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+            <select name="key">
+                {% for key in keys %}
+                {% if not key.user %}
+                <option value="{{ key.key }}">{{ key.key }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+            <button type="submit">Assign</button>
+        </form>
+        
+        <h2>Send Notification</h2>
+        <form method="POST" action="{{ url_for('send_notification') }}">
+            <textarea name="message" placeholder="Message" required></textarea>
+            <select name="target">
+                <option value="all">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.username }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Send</button>
+        </form>
+        
+        <h2>Notifications</h2>
+        <table>
+            <tr><th>Message</th><th>Target</th><th>Created</th></tr>
+            {% for notification in notifications %}
+            <tr>
+                <td>{{ notification.message }}</td>
+                <td>{{ notification.target or 'All' }}</td>
+                <td>{{ datetime.fromtimestamp(notification.created_at).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
