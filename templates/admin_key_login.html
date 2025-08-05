@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Auth</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #151515;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            background: #232323;
+            padding: 32px 36px;
+            border-radius: 10px;
+            box-shadow: 0 2px 20px #0004;
+            min-width: 320px;
+            text-align: center;
+        }
+        .auth-input {
+            width: 90%;
+            padding: 12px;
+            margin: 18px 0 8px 0;
+            border-radius: 6px;
+            border: none;
+            font-size: 18px;
+            text-align: center;
+            outline: none;
+        }
+        .auth-input:focus {
+            outline: 2px solid #2cf;
+        }
+        .submit-btn {
+            background: #2cf;
+            color: #101010;
+            font-weight: bold;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 12px;
+            transition: background 0.1s;
+        }
+        .submit-btn:hover {
+            background: #1baed6;
+        }
+        .error {
+            color: #ff4444;
+            margin-top: 10px;
+        }
+        h2 {
+            margin: 0 0 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Enter Auth Key</h2>
+        <form method="post">
+            <input type="password" class="auth-input" name="auth_key" placeholder="24-char Auth Key" maxlength="24" autocomplete="off" required>
+            <br>
+            <button type="submit" class="submit-btn">Login</button>
+        </form>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>
