@@ -1,20 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>GhostMiner Admin Login</title>
-    <link rel="stylesheet" href="/static/admin.css">
+    <title>Admin Login - GhostMiner</title>
+    <style>
+        body { background: #191919; color: #fff; font-family: Arial; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .center-box { background: #232323; padding: 40px 30px; border-radius: 16px; box-shadow: 0 6px 40px #0007; min-width: 320px; }
+        input[type="text"] { width: 90%; padding: 10px; font-size: 1.1em; border-radius: 8px; border: none; margin-bottom: 18px; }
+        button { background: #FF4747; color: #fff; border: none; border-radius: 8px; padding: 11px 20px; font-size: 1.1em; width: 100%; cursor: pointer; }
+        .error { color: #f66; margin-bottom: 18px; }
+    </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>GhostMiner Admin</h2>
-        {% if error %}
-            <div class="error">{{ error }}</div>
-        {% endif %}
-        <form method="POST">
-            <input type="password" name="auth_key" placeholder="Enter Auth Key" required>
-            <button type="submit">Login</button>
-        </form>
-    </div>
+    <form method="POST" class="center-box">
+        <h2 style="text-align:center; margin-bottom: 20px;">Admin Login</h2>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <input type="text" name="admin_key" placeholder="Enter 24-char admin key" autocomplete="off" maxlength="24">
+        <button type="submit">Login</button>
+    </form>
 </body>
 </html>
